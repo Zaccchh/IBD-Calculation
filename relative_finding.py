@@ -62,14 +62,14 @@ def get_ibs(filename, sample1, sample2, debug=False):
         if len(record.ALT) > 1:
             continue
 
-        index = 0
+        sorted_gt_0 = sorted(record.genotypes[0][:2])
+        sorted_gt_1 = sorted(record.genotypes[1][:2])
 
-        sorted_gt_0 = sorted(record.genotypes[0])
-        sorted_gt_1 = sorted(record.genotypes[1])
-
-        if sorted_gt_0 == sorted_gt_1:
+        if sorted_gt_0[0] == sorted_gt_1[0] and sorted_gt_0[1] == sorted_gt_1[1]:
             index = 2
-        elif sorted_gt_0[0] in sorted_gt_1 or sorted_gt_0[1] in sorted_gt_1:
+        elif sorted_gt_0[0] != sorted_gt_1[0] and sorted_gt_0[1] != sorted_gt_1[1]:
+            index = 0
+        else:
             index = 1
 
         ibs[index] += 1
@@ -88,22 +88,18 @@ def get_ibd(ps, ibs):
     ibd1 = (ibs[1] - ps[1] * ibd0) / ps[4]
     ibd2 = (ibs[2] - ps[2] * ibd0 - ps[5] * ibd1) / ps[8]
 
-    if np.sum(np.array([ibd0, ibd1, ibd2]) > 1) == 1:
-        ibd0, ibd1, ibd2 = np.array(np.array([ibd0, ibd1, ibd2]) > 1, dtype=int)
+    temp = np.array([ibd0, ibd1, ibd2])
 
     # normalize
-    pi = ibd1 / 2 + ibd2
+    if np.sum(temp > 1) == 1:
+        ibd0, ibd1, ibd2 = np.array(temp > 1, dtype=int)
+    elif np.sum(temp < 0) == 1:
+        value = temp[temp < 0]
+        temp[temp < 0] = 0
+        temp[temp.argmax()] = temp[temp.argmax()] + value[0]
+        ibd0, ibd1, ibd2 = temp
 
-    if pi**2 <= ibd2:
-        ibd0_star = 1 - pi**2
-        ibd1_star = 2 * pi * (1 - pi)
-        ibd2_star = pi**2
-    else:
-        ibd0_star = ibd0
-        ibd1_star = ibd1
-        ibd2_star = ibd2
-
-    return ibd0_star, ibd1_star, ibd2_star
+    return ibd0, ibd1, ibd2
 
 
 def get_samples(filename):
@@ -139,7 +135,7 @@ if __name__ == "__main__":
             ps = get_probs(vcf_file, debug=False)
             np.save(cache, ps)
 
-        ibs = get_ibs(vcf_file, args.sample1, args.sample2, debug=False)
+        ibs = get_ibs(vcf_file, args.sample1, args.sample2, debug=True)
 
         p0, p1, p2 = get_ibd(ps, ibs)
 
