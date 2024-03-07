@@ -161,3 +161,10 @@ cython_debug
 
 # Jupyter notebook checkpoints
 .ipynb_checkpoints
+
+# Sample lists
+sample_list.txt
+
+# VCF files
+*.vcf.gz
+*.vcf.gz.tbi

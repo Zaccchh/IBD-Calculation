@@ -1,13 +1,14 @@
 import argparse
 import time
 import numpy as np
+import multiprocessing as mp
 
 from cyvcf2 import VCF
 from pathlib import Path
 
 
 def get_probs(filename, debug=False):
-    records = VCF(filename)
+    records = VCF(filename, threads=mp.cpu_count() - 1)
     ps = np.zeros((9,))
 
     start = time.time()
@@ -15,7 +16,8 @@ def get_probs(filename, debug=False):
     print("Calculating probs at SNP: ")
 
     for count, record in enumerate(records):
-        print(count, end="\r", flush=True)
+        if count % 2_000 == 0:
+            print(f"{count}\t\t{time.time()-start:.2f}s", end="\r", flush=True)
 
         if len(record.ALT) > 1:
             continue
@@ -44,7 +46,7 @@ def get_probs(filename, debug=False):
 
 
 def get_ibs(filename, sample1, sample2, debug=False):
-    records = VCF(filename)
+    records = VCF(filename, threads=mp.cpu_count() - 1)
     records.set_samples([sample1, sample2])
 
     ibs = np.zeros((3,), dtype=int)
@@ -54,7 +56,8 @@ def get_ibs(filename, sample1, sample2, debug=False):
     print("Calculating IBS at SNP: ")
 
     for count, record in enumerate(records):
-        print(count, end="\r", flush=True)
+        if count % 2_000 == 0:
+            print(f"{count}\t\t{time.time()-start:0.2f}s", end="\r", flush=True)
 
         if len(record.ALT) > 1:
             continue
@@ -103,6 +106,11 @@ def get_ibd(ps, ibs):
     return ibd0_star, ibd1_star, ibd2_star
 
 
+def get_samples(filename):
+    records = VCF(filename)
+    return records.samples
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="CSE 284 IBD Calculator",
@@ -111,27 +119,30 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("filename")
-    parser.add_argument("sample1")
-    parser.add_argument("sample2")
+    parser.add_argument("sample1", nargs="?", default=None)
+    parser.add_argument("sample2", nargs="?", default=None)
 
     args = parser.parse_args()
-    # print(args.filename, args.sample1, args.sample2)
 
     vcf_file = Path(args.filename)
-
     assert vcf_file.exists(), "Please input a valid VCF file"
 
-    if (cache := Path(f"cache/{vcf_file.name}.npy")).exists():
-        ps = np.load(cache)
+    if args.sample1 is None and args.sample2 is None:
+        with open("sample_list.txt", "w") as file:
+            samples = get_samples(vcf_file)
+            file.write("\n".join(samples))
     else:
-        print("Probability cache not found, performing two passes.")
-        ps = get_probs(vcf_file, debug=False)
-        np.save(cache, ps)
+        if (cache := Path(f"cache/{vcf_file.name}.npy")).exists():
+            ps = np.load(cache)
+        else:
+            print("Probability cache not found, performing two passes.")
+            ps = get_probs(vcf_file, debug=False)
+            np.save(cache, ps)
 
-    ibs = get_ibs(vcf_file, args.sample1, args.sample2, debug=False)
+        ibs = get_ibs(vcf_file, args.sample1, args.sample2, debug=False)
 
-    p0, p1, p2 = get_ibd(ps, ibs)
+        p0, p1, p2 = get_ibd(ps, ibs)
 
-    print(f"P(IBD=0) = {p0:.5f}")
-    print(f"P(IBD=1) = {p1:.5f}")
-    print(f"P(IBD=2) = {p2:.5f}")
+        print(f"P(IBD=0) = {p0:.5f}")
+        print(f"P(IBD=1) = {p1:.5f}")
+        print(f"P(IBD=2) = {p2:.5f}")
