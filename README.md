@@ -1,4 +1,7 @@
 # CSE284-IBD-Calculation
+Group 29
+Zachariah Jasser
+Rafferty Chen
 
 A tool for calculating IBD probabilities between samples (only 2 at a time for now).
 
