@@ -10,7 +10,7 @@ To run our script, you would use the following command in a terminal:
 ```text
 python relative_finding.py <path_to_vcf_file> <sample1> <sample2>
 ```
-
+\
 If you don't know what samples are available, you can leave out the sample arguments, and the script will generate a text file called `sample_list.txt` that contains the list of samples for the specified VCF file. For example, the command:
 ```text
 python relative_finding.py ALL.chr1.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz
@@ -25,7 +25,7 @@ HG00101
 HG00102
 ...
 ```
-
+\
 A filled-out example would be: 
 ```text
 python relative_finding.py ALL.chr1.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz HG03750 HG03754
