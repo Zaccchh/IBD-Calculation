@@ -105,9 +105,7 @@ def calc_ibs_segment(i1, i2, ref, start, end):
     return ibs
 
 
-def get_ibs(ref, sample_idx, sample1, sample2, debug=False):
-    print("Calculating IBS")
-
+def get_ibs(ref, sample_idx, sample1, sample2, regions, debug=False):
     i1 = sample_idx[sample1]
     i2 = sample_idx[sample2]
 
@@ -124,8 +122,6 @@ def get_ibs(ref, sample_idx, sample1, sample2, debug=False):
 
 
 def get_ibd(ps, ibs):
-    print("Calculating IBD")
-
     ibd0 = ibs[0] / ps[0]
     ibd1 = (ibs[1] - ps[1] * ibd0) / ps[4]
     ibd2 = (ibs[2] - ps[2] * ibd0 - ps[5] * ibd1) / ps[8]
@@ -150,6 +146,34 @@ def get_samples(filename):
     return records.samples
 
 
+def app(filename, sample1, sample2):
+    vcf_file = Path(filename)
+    assert vcf_file.exists(), "Please input a valid VCF file"
+
+    ref, contig_length, _ = get_stats(vcf_file)
+
+    cores = mp.cpu_count()
+    segment = contig_length // cores
+    regions = [[segment * i, segment * (i + 1) + 1] for i in range(cores)]
+    regions[-1][-1] = None
+
+    sample_idx = get_sample_idx(vcf_file)
+
+    if (cache := Path(f"cache/{vcf_file.name}.npy")).exists():
+        ps = np.load(cache)
+    else:
+        print("Probability cache not found, performing two passes.")
+        ps = get_probs(vcf_file, debug=False)
+        np.save(cache, ps)
+
+    global tb  # sorry for use of global, but TabixFile is not picklable
+    tb = pysam.TabixFile(str(vcf_file))
+
+    ibs = get_ibs(ref, sample_idx, sample1, sample2, regions, debug=False)
+
+    return get_ibd(ps, ibs)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="CSE 284 IBD Calculator",
@@ -163,37 +187,15 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    vcf_file = Path(args.filename)
-    assert vcf_file.exists(), "Please input a valid VCF file"
-
-    ref, contig_length, _ = get_stats(vcf_file)
-
-    cores = mp.cpu_count()
-    segment = contig_length // cores
-    regions = [[segment * i, segment * (i + 1) + 1] for i in range(cores)]
-    regions[-1][-1] = None
-
-    sample_idx = get_sample_idx(vcf_file)
-
     if args.sample1 is None and args.sample2 is None:
         with open("sample_list.txt", "w") as file:
-            samples = get_samples(vcf_file)
+            samples = get_samples(args.filename)
             file.write("\n".join(samples))
     else:
-        if (cache := Path(f"cache/{vcf_file.name}.npy")).exists():
-            ps = np.load(cache)
-        else:
-            print("Probability cache not found, performing two passes.")
-            ps = get_probs(vcf_file, debug=False)
-            np.save(cache, ps)
+        print("Calculating IBD...")
 
-    global tb  # sorry for use of global, but TabixFile is not picklable
-    tb = pysam.TabixFile(str(vcf_file))
+        p0, p1, p2 = app(args.filename, args.sample1, args.sample2)
 
-    ibs = get_ibs(ref, sample_idx, args.sample1, args.sample2, debug=True)
-
-    p0, p1, p2 = get_ibd(ps, ibs)
-
-    print(f"P(IBD=0) = {p0:.5f}")
-    print(f"P(IBD=1) = {p1:.5f}")
-    print(f"P(IBD=2) = {p2:.5f}")
+        print(f"P(IBD=0) = {p0:.5f}")
+        print(f"P(IBD=1) = {p1:.5f}")
+        print(f"P(IBD=2) = {p2:.5f}")
