@@ -13,14 +13,17 @@ from pathlib import Path
 def get_stats(filename):
     """
     uses bcftools to get contig name, contig length, and number of records
-    will generate a .tbi file if one doesn't already exist
+    assumes a .tbi file with the correct stats exists
     """
     bcftools_output = subprocess.run(
         ["bcftools", "index", "-t", "-s", filename], capture_output=True
-    )  # will generate tbi file if it doesn't already exist
-    ref, contig_length, num_snps = (
-        bcftools_output.stdout.decode("utf-8").strip().split("\t")
     )
+    try:
+        ref, contig_length, num_snps = (
+            bcftools_output.stdout.decode("utf-8").strip().split("\t")
+        )
+    except ValueError:
+        raise ValueError("No valid tabix file exists")
 
     contig_length = int(contig_length)
     num_snps = int(num_snps)
@@ -185,7 +188,7 @@ if __name__ == "__main__":
             np.save(cache, ps)
 
     global tb  # sorry for use of global, but TabixFile is not picklable
-    tb = pysam.TabixFile(str(vcf_file))  # should always exist because of get_stats
+    tb = pysam.TabixFile(str(vcf_file))
 
     ibs = get_ibs(ref, sample_idx, args.sample1, args.sample2, debug=True)
 
