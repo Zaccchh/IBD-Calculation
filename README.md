@@ -19,7 +19,7 @@ To install, follow these steps:
     ```
 2. Download sample files and install requirements:
    ```bash
-   ./setup.sh
+   bash setup.sh
    ```
 
 ## Running 
