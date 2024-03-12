@@ -1,9 +1,9 @@
 set -eu
 
-if ! [ -f "sample/ALL.chr9.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz" ]; then
+if ! [ -f "sample/ALL.chr15.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz" ]; then
     echo "Downloading sample VCF file..."
     mkdir -p sample
-    wget https://hgdownload.cse.ucsc.edu/gbdb/hg19/1000Genomes/phase3/ALL.chr9.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz -O sample/ALL.chr9.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz
+    wget https://hgdownload.cse.ucsc.edu/gbdb/hg19/1000Genomes/phase3/ALL.chr15.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz -O sample/ALL.chr15.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz
 fi
 
 if ! [ -x "$(command -v bcftools)" ]; then
@@ -22,7 +22,7 @@ if ! [ -x "$(command -v bcftools)" ]; then
 fi
 
 echo "Indexing VCF file..."
-bcftools index -t "sample/ALL.chr9.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz"
+bcftools index -t "sample/ALL.chr15.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz"
 
 echo "Installing requirements..."
 pip install --user -r requirements.txt
