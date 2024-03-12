@@ -17,8 +17,8 @@ if ! [ -x "$(command -v bcftools)" ]; then
     make install
     cd ..
     rm -rf bcftools-1.19
-
-    export PATH=$new_dir:$PATH 
+    
+    export PATH=$new_dir:$PATH
 fi
 
 echo "Indexing VCF file..."
